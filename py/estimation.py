@@ -106,3 +106,15 @@ def likelihood_surface(T, LAMBDA, BETA):
         
     return(M)
 
+def hessian(M, X, Y):
+    """
+    Based on 
+    https://stackoverflow.com/questions/31206443/numpy-second-derivative-of-a-ndimensional-array
+    """
+    M_grad = np.gradient(M, X, Y) 
+    hessian = np.empty(M.shape + (M.ndim, M.ndim), dtype=M.dtype) 
+    for k, grad_k in enumerate(M_grad):
+        tmp_grad = np.gradient(grad_k, X, Y) 
+        for l, grad_kl in enumerate(tmp_grad):
+            hessian[:, :,k, l] = grad_kl
+    return hessian
