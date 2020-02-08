@@ -3,3 +3,5 @@
 *.pyc
 *checkpoint.py
 *checkpoint*
+py/.ipynb_checkpoints
+hessian.ipynb
