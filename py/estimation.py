@@ -63,26 +63,29 @@ def synthetic_time_series(n, beta, lam, n_rounds, T0):
         
     return(T)
 
-def state_matrix(T, lam):
+def state_matrix(T, lam, A0 = None):
     n_rounds = T.shape[0]
     DT = np.diff(T, axis = 0)
     A = np.zeros_like(T)
-    A[0] = T[0]
+    if A0 is None:
+        A[0] = T[0]
+    else:
+        A[0] = A0
     for j in range(1,n_rounds):
         A[j] = lam*A[j-1]+(1-lam)*DT[j-1]
     return(A)
 
-def LL(T, lam):
+def LL(T, lam, A0 = None, alpha = 0):
         
     n_rounds, n = T.shape[0], T.shape[1]
         
-    A = state_matrix(T,lam)
+    A = state_matrix(T,lam,A0)
     DT = np.diff(T, axis = 0)
     increments = DT.sum(axis = 0)
 
     S = np.zeros((n_rounds-1,n))
     for i in range(0,n_rounds-1):
-        S[i] = SpringRank.SpringRank(A[i])
+        S[i] = SpringRank.SpringRank(A[i], alpha = alpha)
 
     counts = DT.sum(axis = 2)    
 
@@ -94,14 +97,14 @@ def LL(T, lam):
     
     return(ll)
 
-def likelihood_surface(T, LAMBDA, BETA):
+def likelihood_surface(T, LAMBDA, BETA, A0 = None, alpha = 0):
     
     n_lambda = len(LAMBDA)
     n_beta = len(BETA)
     
     M = np.zeros((n_lambda, n_beta))
     for l in range(n_lambda):
-        ll = LL(T,LAMBDA[l])
+        ll = LL(T,LAMBDA[l], A0, alpha = alpha)
         M[l] = np.array([ll(b) for b in BETA])
         
     return(M)
