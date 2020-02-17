@@ -6,3 +6,4 @@
 py/.ipynb_checkpoints
 hessian.ipynb
 fig
+*.DS_Store
