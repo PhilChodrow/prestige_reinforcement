@@ -1,5 +1,6 @@
 import numpy as np
 from SpringRank import SpringRank
+from scipy.special import gammaln # gammaln(x+1) = log x!
 
 def compute_gamma(A, beta):
     
@@ -75,18 +76,64 @@ def state_matrix(T, lam, A0 = None):
         A[j] = lam*A[j-1]+(1-lam)*DT[j-1]
     return(A)
 
-def LL(T, lam, A0 = None, alpha = 0):
+# def nuLL(T, lam, A0 = None, alpha = 0):
+    
+#     n_rounds, n = T.shape[0], T.shape[1]
+        
+#     A = state_matrix(T,lam,A0)
+#     DT = np.diff(T, axis = 0)
+#     increments = DT.sum(axis = 0)
+
+#     D = np.zeros((n_rounds-1,n))
+    
+#     for i in range(0, n_rounds-1):
+#         D[i] = A.sum(axis = 1) # check
+    
+#     counts = DT.sum(axis = )
+
+def LL(T, lam, A0 = None, fun = SpringRank.SpringRank, **kwargs):
+               
+    n_rounds, n = T.shape[0], T.shape[1]
+        
+    A = state_matrix(T,lam,A0)
+    DT = np.diff(T, axis = 0)
+    increments = DT.sum(axis = 0)
+    
+    S = np.zeros((n_rounds-1,n))
+    
+    for i in range(0, n_rounds-1):
+        S[i] = fun(A[i], **kwargs)
+    
+    counts = DT.sum(axis = 2)    
+    K = counts.sum(axis = 1)
+    
+    def ll(beta):
+        first = (beta*counts*S).sum()
+        second = (K*np.log(np.exp(beta*S).sum(axis = 1))).sum()
+        constant = (gammaln(K + 1) - K*np.log(n) - gammaln(counts + 1).sum(axis = 1)).sum()
+        
+        return(first - second + constant) / counts.sum()
+        
+    return(ll)
+
+
+def LL_(T, lam, A0 = None, alpha = 0, method = 'SpringRank'):
         
     n_rounds, n = T.shape[0], T.shape[1]
         
     A = state_matrix(T,lam,A0)
     DT = np.diff(T, axis = 0)
     increments = DT.sum(axis = 0)
-
+    
     S = np.zeros((n_rounds-1,n))
-    for i in range(0,n_rounds-1):
-        S[i] = SpringRank.SpringRank(A[i], alpha = alpha)
-
+    
+    if method == 'SpringRank':
+        for i in range(0,n_rounds-1):
+            S[i] = SpringRank.SpringRank(A[i], alpha = alpha)
+    elif method == 'null':
+        for i in range(0,n_rounds-1):
+            S[i] = A[i].sum(axis = 1) # check axis
+    
     counts = DT.sum(axis = 2)    
 
     def ll(beta):
@@ -97,14 +144,14 @@ def LL(T, lam, A0 = None, alpha = 0):
     
     return(ll)
 
-def likelihood_surface(T, LAMBDA, BETA, A0 = None, alpha = 0):
+def likelihood_surface(T, LAMBDA, BETA, A0 = None, alpha = 0, fun = SpringRank.SpringRank, **kwargs):
     
     n_lambda = len(LAMBDA)
     n_beta = len(BETA)
     
     M = np.zeros((n_lambda, n_beta))
     for l in range(n_lambda):
-        ll = LL(T,LAMBDA[l], A0, alpha = alpha)
+        ll = LL(T,LAMBDA[l], A0, fun = fun, **kwargs)
         M[l] = np.array([ll(b) for b in BETA])
         
     return(M)
@@ -121,3 +168,11 @@ def hessian(M, X, Y):
         for l, grad_kl in enumerate(tmp_grad):
             hessian[:, :,k, l] = grad_kl
     return hessian
+
+def get_estimates(M, BETA, LAMBDA):
+    ix = np.where(M == M.max())
+    beta_hat = BETA[ix[1]][0]
+    lambda_hat = LAMBDA[ix[0]][0]
+    return({'beta' : beta_hat, 
+           'lambda' : lambda_hat})
+
