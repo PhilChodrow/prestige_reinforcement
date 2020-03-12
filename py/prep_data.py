@@ -14,13 +14,13 @@ def make_throughput_path():
 	throughput_path = 'throughput'
 	Path(throughput_path).mkdir(exist_ok = True)
 
-def top_n_filter(df, labels = None, top_n = None):
+def top_n_filter(df, labels = None, top_n = None, col = 'endorsed'):
 	'''
 	filter df so that only the top n agents by number of endorsements received
 	are included. 
 	'''
 	if top_n is not None:
-		the_top = df[['endorsed', 'k']].groupby('endorsed').sum().nlargest(top_n,'k')
+		the_top = df[[col, 'k']].groupby(col).sum().nlargest(top_n,'k')
 		the_top = np.array(the_top.index)
 		df = df[df['endorsed'].isin(the_top)]
 		df = df[df['endorser'].isin(the_top)]
@@ -53,7 +53,7 @@ def df_to_matrix_sequence(df):
 	
 	return(T)	
 
-def initial_condition(T, t_start):
+def initial_condition(T, timesteps, t_start):
 	
 	A0 = T[t_start,:,:]
 	A0 = A0 / A0.sum() # normalized
@@ -64,7 +64,7 @@ def initial_condition(T, t_start):
 
 	n_obs = T[-1].sum() - T[t_start].sum()
 
-	return(A0, n_obs)
+	return(T[t_start:,:,:], timesteps[t_start:], A0, n_obs)
 
 # -------------------------
 # MATH PHD 
@@ -168,4 +168,81 @@ def prep_parakeets(path, group):
 	timesteps = np.unique(df.t)
 
 	return(T, timesteps, labels)
+
+# -------------------------
+# rt_pol
+# -------------------------
+
+def read_rt_pol(path):
+	
+	df = pd.read_csv(path + 'rt-pol.txt',
+		             names = ('endorsed', 'endorser', 't'))
+	return(df)
+
+def prep_rt_pol(path, unit = np.timedelta64(1, 'D'), top_n = 50):
+
+	df = read_rt_pol(path)
+
+	df['t'] = pd.to_datetime(pd.to_timedelta(df.t, unit='s'))
+	df['t_delta'] = pd.to_timedelta(df.t - df.t.min())
+
+	df['t'] = np.round(df['t_delta'] / unit).astype(int)
+
+	df['k'] = np.ones(len(df.index))
+
+	df = df[['endorsed', 'endorser', 't', 'k']]
+
+	df, labels = top_n_filter(df, labels = None, top_n = top_n)
+
+	T = df_to_matrix_sequence(df)
+
+	timesteps = np.unique(df.t)
+
+	return(T, timesteps)
+
+# -------------------------
+# wiki
+# -------------------------
+
+def read_wiki(path):
+	df = pd.read_csv(path + 'soc-wiki-elec.txt',
+		             delimiter = ' ')	
+	return(df)
+
+def prep_wiki(path, top_n = 500):
+
+	df = read_wiki(path)
+
+	df['t'] = pd.to_datetime(pd.to_timedelta(df.t, unit='s'))
+	df['t_delta'] = pd.to_timedelta(df.t - df.t.min())
+	df['t'] = np.round(df['t_delta'] / np.timedelta64(1, 'D')).astype(int)
+	df['t'] = (df['t']/28).astype(int)	
+
+	df = df[df.sign > 0]
+	df['k'] = np.ones(len(df.index))
+	df, labels = top_n_filter(df, top_n = top_n, col = 'endorsed')
+
+	T = df_to_matrix_sequence(df)
+
+	timesteps = np.unique(df.t)
+
+	return(T, timesteps)
+
+def wiki_df(path, top_n = 500):
+
+	df = read_wiki(path)
+
+	df['t'] = pd.to_datetime(pd.to_timedelta(df.t, unit='s'))
+	df['t_delta'] = pd.to_timedelta(df.t - df.t.min())
+	df['t'] = np.round(df['t_delta'] / np.timedelta64(1, 'D')).astype(int)
+	df['t'] = (df['t']/28).astype(int)	
+
+	df = df[df.sign > 0]
+	df['k'] = np.ones(len(df.index))
+	df, labels = top_n_filter(df, top_n = top_n)
+
+	return(df)
+
+
+
 
