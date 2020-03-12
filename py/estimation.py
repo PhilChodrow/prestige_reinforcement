@@ -112,36 +112,8 @@ def LL(T, lam, A0 = None, fun = SpringRank.SpringRank, **kwargs):
         second = (K*np.log(np.exp(beta*S).sum(axis = 1))).sum()
         constant = (gammaln(K + 1) - K*np.log(n) - gammaln(counts + 1).sum(axis = 1)).sum()
         
-        return(first - second + constant) / counts.sum()
+        return(first - second + constant)
         
-    return(ll)
-
-
-def LL_(T, lam, A0 = None, alpha = 0, method = 'SpringRank'):
-        
-    n_rounds, n = T.shape[0], T.shape[1]
-        
-    A = state_matrix(T,lam,A0)
-    DT = np.diff(T, axis = 0)
-    increments = DT.sum(axis = 0)
-    
-    S = np.zeros((n_rounds-1,n))
-    
-    if method == 'SpringRank':
-        for i in range(0,n_rounds-1):
-            S[i] = SpringRank.SpringRank(A[i], alpha = alpha)
-    elif method == 'null':
-        for i in range(0,n_rounds-1):
-            S[i] = A[i].sum(axis = 1) # check axis
-    
-    counts = DT.sum(axis = 2)    
-
-    def ll(beta):
-        first = (beta*counts*S).sum()
-        second = (counts.sum(axis = 1)*np.log(np.exp(beta*S).sum(axis = 1))).sum()
-
-        return(first - second)
-    
     return(ll)
 
 def likelihood_surface(T, LAMBDA, BETA, A0 = None, alpha = 0, fun = SpringRank.SpringRank, **kwargs):
@@ -173,6 +145,17 @@ def get_estimates(M, BETA, LAMBDA):
     ix = np.where(M == M.max())
     beta_hat = BETA[ix[1]][0]
     lambda_hat = LAMBDA[ix[0]][0]
-    return({'beta' : beta_hat, 
-           'lambda' : lambda_hat})
 
+    # stderrs from Fisher Information Matrix
+    try:
+        stderrs = np.sqrt(-np.diag(np.linalg.inv(hessian(M, BETA, LAMBDA)[ix])[0]))
+
+        return({'beta' : beta_hat, 
+               'lambda' : lambda_hat,
+               's_beta' : stderrs[1] ,
+               's_lambda' : stderrs[0]})
+    except np.linalg.LinAlgError:
+        return({'beta' : beta_hat, 
+               'lambda' : lambda_hat,
+               's_beta' : np.nan,
+               's_lambda' : np.nan})
