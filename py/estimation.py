@@ -126,7 +126,7 @@ def likelihood_surface(T, LAMBDA, BETA, A0 = None, alpha = 0, fun = SpringRank.S
         ll = LL(T,LAMBDA[l], A0, fun = fun, **kwargs)
         M[l] = np.array([ll(b) for b in BETA])
         
-    return(M)
+    return({'M' : M, 'LAMBDA' : LAMBDA, 'BETA' : BETA})
 
 def hessian(M, X, Y):
     """
@@ -141,7 +141,12 @@ def hessian(M, X, Y):
             hessian[:, :,k, l] = grad_kl
     return hessian
 
-def get_estimates(M, BETA, LAMBDA):
+def get_estimates(result):
+    
+    M = result['M']
+    BETA = result['BETA']
+    LAMBDA = result['LAMBDA']
+    
     ix = np.where(M == M.max())
     beta_hat = BETA[ix[1]][0]
     lambda_hat = LAMBDA[ix[0]][0]
@@ -159,3 +164,11 @@ def get_estimates(M, BETA, LAMBDA):
                'lambda' : lambda_hat,
                's_beta' : np.nan,
                's_lambda' : np.nan})
+
+    
+def pageRank(A, alpha = 0.15):
+    D_inv = np.diag(1/A.sum(axis = 1))
+    A_ = A.dot(D_inv)
+    B = (1-alpha)*A_ + alpha*np.ones_like(A)
+    eig = np.linalg.eig(B)
+    return(np.abs(eig[1][:,0]))
