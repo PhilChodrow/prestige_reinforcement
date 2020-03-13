@@ -172,3 +172,17 @@ def pageRank(A, alpha = 0.15):
     B = (1-alpha)*A_ + alpha*np.ones_like(A)
     eig = np.linalg.eig(B)
     return(np.abs(eig[1][:,0]))
+
+
+# connectedness issues
+
+def check_connected(A):
+
+    A_ = (A + A.T) / 2
+    D = np.diag(A_.sum(axis = 1))
+    L = D - A_
+    eig = np.linalg.eigh(L)
+    if (eig[0] < 10**(-30)).sum() >= 1: 
+        return(False)
+    else:
+        return(True)

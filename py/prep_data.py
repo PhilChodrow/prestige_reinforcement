@@ -25,14 +25,14 @@ def top_n_filter(df, labels = None, top_n = None, col = 'endorsed'):
 		df = df[df['endorsed'].isin(the_top)]
 		df = df[df['endorser'].isin(the_top)]
 
-	first_map = {the_top[i] : str(i) for i in range(top_n)}
-	second_map = {str(i) : i for i in range(top_n)}
+	first_map = {the_top[i] : str(i) + '_' for i in range(top_n)}
+	second_map = {str(i) + '_': i for i in range(top_n)}
 	
 	df = df.replace({'endorsed' : first_map, 'endorser' : first_map})
 	df = df.replace({'endorsed' : second_map, 'endorser' : second_map})
 
 	if labels is not None:
-		label_lookup = {second_map[first_map[i]] : labels[i-1] for i in first_map}
+		label_lookup = {second_map[first_map[i]] : labels[i] for i in first_map}
 
 	else: 
 		label_lookup = None
@@ -48,10 +48,10 @@ def df_to_matrix_sequence(df):
 
 	T_ = np.zeros((t_max - t_min+1, n, n))
 	for i in df.index:
-	    T_[df.t[i] - t_min, df.endorsed[i], df.endorser[i]] += df.k[i] 
+		T_[df.t[i] - t_min, df.endorsed[i], df.endorser[i]] += df.k[i] 
 	T = np.cumsum(T_, axis = 0) 
 	
-	return(T)	
+	return(T)   
 
 def initial_condition(T, timesteps, t_start):
 	
@@ -60,7 +60,7 @@ def initial_condition(T, timesteps, t_start):
 
 	# mean hiring per year after t_start: 
 	v = T[t_start:,:,:].sum(axis = (1,2))
-	A0 = A0*((v[-1] - v[0]) / len(v))	
+	A0 = A0*((v[-1] - v[0]) / len(v))   
 
 	n_obs = T[-1].sum() - T[t_start].sum()
 
@@ -79,12 +79,15 @@ def read_math_phd(path):
 	df = pd.read_csv(path + 'PhD_exchange.txt',
 		 delim_whitespace=True,
 		 names = ('endorsed', 'endorser', 'k', 't'))
-
+	
+	df.endorsed -= 1
+	df.endorser -= 1
+    
 	with open(path + 'school_names.txt') as f:
 		labels = f.read().splitlines()
 		for i in range(len(labels)):
 			labels[i] = labels[i].strip()
-
+	
 	return(df, labels)
 
 def prep_math_phd(path, top_n = None):
@@ -114,16 +117,16 @@ def prep_newcomb_frat(path, rank_threshold = 1):
 	n = M.shape[1]
 
 	for i in range(M.shape[0]):
-	    for j in range(n):
-	        if M[i,j] <= rank_threshold: 
-	            df = df.append(
-	            {
-	                'endorser' : i%n,
-	                'endorsed' : j,
-	                't' : tau[int(i/n)],
-	                'k' : 1
-	            },
-	            ignore_index = True)
+		for j in range(n):
+			if M[i,j] <= rank_threshold: 
+				df = df.append(
+				{
+					'endorser' : i%n,
+					'endorsed' : j,
+					't' : tau[int(i/n)],
+					'k' : 1
+				},
+				ignore_index = True)
 
 	T = df_to_matrix_sequence(df)
 
@@ -140,7 +143,7 @@ def prep_newcomb_frat(path, rank_threshold = 1):
 def read_parakeets(path): 
 
 	df = pd.read_csv(path + 'aggXquarter.txt', 
-            delim_whitespace=True)	
+			delim_whitespace=True)  
 
 	return(df)
 
@@ -150,15 +153,15 @@ def prep_parakeets(path, group):
 	df = df[df.group == group]
 
 	t_max = df['study.quarter'].max() 
-	all_birds = np.unique(np.concatenate((df.actor, df.target)))	
+	all_birds = np.unique(np.concatenate((df.actor, df.target)))    
 
 	lookup = {all_birds[i] : i for i in range(len(all_birds))}
 
 	df = df.replace({'actor' : lookup, 'target' : lookup})
 	df = df.rename(columns = {'study.quarter' : 't', 
-	                     'actor' : 'endorsed', 
-	                     'target' : 'endorser', 
-	                     'number.wins' : 'k'})
+						 'actor' : 'endorsed', 
+						 'target' : 'endorser', 
+						 'number.wins' : 'k'})
 
 	df = df[['endorser', 'endorsed', 't', 'k']]
 	labels = {lookup[key] : key for key in lookup}
@@ -176,7 +179,7 @@ def prep_parakeets(path, group):
 def read_rt_pol(path):
 	
 	df = pd.read_csv(path + 'rt-pol.txt',
-		             names = ('endorsed', 'endorser', 't'))
+					 names = ('endorsed', 'endorser', 't'))
 	return(df)
 
 def prep_rt_pol(path, unit = np.timedelta64(1, 'D'), top_n = 50):
@@ -206,7 +209,7 @@ def prep_rt_pol(path, unit = np.timedelta64(1, 'D'), top_n = 50):
 
 def read_wiki(path):
 	df = pd.read_csv(path + 'soc-wiki-elec.txt',
-		             delimiter = ' ')	
+					 delimiter = ' ')   
 	return(df)
 
 def prep_wiki(path, top_n = 500):
@@ -216,7 +219,7 @@ def prep_wiki(path, top_n = 500):
 	df['t'] = pd.to_datetime(pd.to_timedelta(df.t, unit='s'))
 	df['t_delta'] = pd.to_timedelta(df.t - df.t.min())
 	df['t'] = np.round(df['t_delta'] / np.timedelta64(1, 'D')).astype(int)
-	df['t'] = (df['t']/28).astype(int)	
+	df['t'] = (df['t']/28).astype(int)  
 
 	df = df[df.sign > 0]
 	df['k'] = np.ones(len(df.index))
@@ -235,7 +238,7 @@ def wiki_df(path, top_n = 500):
 	df['t'] = pd.to_datetime(pd.to_timedelta(df.t, unit='s'))
 	df['t_delta'] = pd.to_timedelta(df.t - df.t.min())
 	df['t'] = np.round(df['t_delta'] / np.timedelta64(1, 'D')).astype(int)
-	df['t'] = (df['t']/28).astype(int)	
+	df['t'] = (df['t']/28).astype(int)  
 
 	df = df[df.sign > 0]
 	df['k'] = np.ones(len(df.index))
@@ -243,6 +246,51 @@ def wiki_df(path, top_n = 500):
 
 	return(df)
 
+# -------------------------
+# chess_transfers
+# -------------------------
+
+def read_chess(path):
+	df = pd.read_csv(path + 'chess_transfers.csv')  
+	return(df)
+
+def prep_chess(path, top_n = 10):
+
+	df = read_chess(path)
+	df['t'] = pd.to_datetime(df['Transfer Date'])
+	df['t'] = pd.DatetimeIndex(df['t']).year
+	
+	timesteps = np.unique(df.t)
+	
+	df['t'] = df['t'] - df['t'].min()
+	
+	df = df.rename(columns = {
+		'Federation' : 'endorsed',
+		'Form.Fed'   : 'endorser',
+	})
+	
+	df['endorsed'] = df['endorsed'].astype(str)
+	df['endorser'] = df['endorser'].astype(str)
+		
+	df = df[df.endorser != 'nan']
+	df = df[df.endorsed != 'nan']
+	
+	df['k'] = 1
+	
+	names = np.unique(np.concatenate((df.endorsed.astype(str), df.endorser.astype(str))))
+	recode = {names[i] : i for i in range(len(names))}
+	df = df.replace({'endorsed' : recode, 'endorser' : recode})
+	
+	labels = names.copy()
+
+	df, labels = top_n_filter(df, labels = labels, top_n = top_n)
+	
+	T = df_to_matrix_sequence(df)
+	
+	return(T, timesteps, labels)
+	
+	
+	
 
 
 
