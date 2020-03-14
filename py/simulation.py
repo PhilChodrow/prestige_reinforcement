@@ -29,7 +29,7 @@ def increment(A, feature = features.uniform_feature, beta = 0, m_updates = 1, me
 		for k in range(m_updates):
 			# endorser is uniformly random
 			i = np.random.randint(n) 
-			# endorsed according to Delta[i]
+			# endorsed according to bar_delta[i]
 			j = np.random.choice(n, p = bar_delta[i]) 
 			Delta[i,j] += 1
 
@@ -53,7 +53,7 @@ def simulate(A0, n_rounds, lam, feature = features.uniform_feature, beta = 0, m_
 		T[k] = T[k-1]
 		Delta = increment(A[k-1], feature = feature, beta = beta, m_updates = m_updates, method = method, **kwargs)
 		T[k] += Delta
-		A[k] = lam*A[k] + (1-lam)*Delta	
+		A[k] = lam*A[k-1] + (1-lam)*Delta	
 
 	return(T)	
 

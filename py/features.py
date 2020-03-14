@@ -50,8 +50,6 @@ def SR_quadratic_feature(A, alpha = 10**(-3)):
 		S = np.zeros((n_rounds, 2, n, n))
 
 		for i in range(0,n_rounds):
-			# the ith entry in S is derived from A[i-1]
-			# and used to predict DT[i]
 			S[i] = SR_quadratic_feature(A[i], alpha)
 
 	return(S)

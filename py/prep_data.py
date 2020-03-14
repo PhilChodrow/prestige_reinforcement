@@ -48,7 +48,7 @@ def df_to_matrix_sequence(df):
 
 	T_ = np.zeros((t_max - t_min+1, n, n))
 	for i in df.index:
-		T_[df.t[i] - t_min, df.endorsed[i], df.endorser[i]] += df.k[i] 
+		T_[df.t[i] - t_min, df.endorser[i], df.endorsed[i]] += df.k[i] 
 	T = np.cumsum(T_, axis = 0) 
 	
 	return(T)   
