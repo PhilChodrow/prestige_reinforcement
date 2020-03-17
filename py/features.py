@@ -77,7 +77,7 @@ def SR_linear_feature_(A, alpha = 10**(-3)):
 
 SR_linear_feature = time_series_vectorizer(SR_linear_feature_)
 
-def degree_linear_feature_(A, d0 = 1):
+def degree_linear_feature_(A, d0 = 0):
 
 	n = A.shape[1]
 	
@@ -90,7 +90,7 @@ def degree_linear_feature_(A, d0 = 1):
 
 degree_linear_feature = time_series_vectorizer(degree_linear_feature_)
 
-def degree_quadratic_feature_(A, d0 = 1):
+def degree_quadratic_feature_(A, d0 = 0):
 
 	n = A.shape[1]
 	S = np.zeros((2,n,n))
