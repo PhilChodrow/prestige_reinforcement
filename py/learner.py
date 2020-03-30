@@ -172,28 +172,28 @@ class learner:
 		alpha = alpha0
 
 		while (obj_old - obj_current > tol):
-		    
-		    obj_old = obj_current
-		    
-		    alpha = alpha0
-		    
-		    deriv = (obj(lam + delta) - obj_current)/delta
-		    deriv = np.sign(deriv)*np.min((np.abs(deriv), step_cap/alpha))
-		    
-		    obj_proposal = np.inf
-		    proposal = lam - alpha*deriv
-		    
-		    while obj_proposal > obj_current:
-		        
-		        proposal = lam - alpha*deriv
-		        obj_proposal = obj(proposal)
-		        alpha = alpha/2
-		        
-		    lam = proposal
-		    obj_current = obj(proposal)
+			
+			obj_old = obj_current
+			
+			alpha = alpha0
+			
+			deriv = (obj(lam + delta) - obj_current)/delta
+			deriv = np.sign(deriv)*np.min((np.abs(deriv), step_cap/alpha))
+			
+			obj_proposal = np.inf
+			proposal = lam - alpha*deriv
+			
+			while obj_proposal > obj_current:
+				
+				proposal = lam - alpha*deriv
+				obj_proposal = obj(proposal)
+				alpha = alpha/2
+				
+			lam = proposal
+			obj_current = obj(proposal)
 
-		    if print_updates:
-		    	print('Lambda = ' + str(lam) + ', LL = ' + str(obj_current))
+			if print_updates:
+				print('Lambda = ' + str(lam) + ', LL = ' + str(obj_current))
 		
 
 		print('computing parameter vector beta')
@@ -226,8 +226,27 @@ class learner:
 		return Hessian(f)(x)	
 
 
+	def likelihood_surface(self, LAM, BETA):
+		'''
+		only implemented for a surface over lambda and a single parameter vector, will error in higher-dimensional models
+		'''
+		
+		lam_grid = len(LAM)
+		b_grid = len(BETA)
+		
+		M = np.zeros((lam_grid, b_grid))
 
+		for i in range(lam_grid):
+			lam = LAM[i]
+			self.compute_state_matrix(lam = lam)
+			self.compute_score()
+			self.compute_features()
 
+			for j in range(b_grid):
+				beta = BETA[j]
+				M[i,j] = self.ll(np.array([beta]))
+		
+		return(M)
 
 
 

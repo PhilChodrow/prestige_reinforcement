@@ -7,17 +7,23 @@ from py import features
 
 # in both the SIMULATION and the DATA ANALYSIS, agent i is a uniformly random endorser of agent j. 
 
-def stochastic_update(GAMMA, m_updates):
+def stochastic_update(GAMMA, m_updates_per = 1, m_updates = None):
 	n = GAMMA.shape[0]
 	Delta = np.zeros_like(GAMMA) # initialize
-	for i in range(n):
-		J = np.random.choice(n, p = GAMMA[i], size = m_updates)
-		Delta[i,J] += 1	
+
+	if m_updates is not None:
+		i = np.random.randint(n)
+		j = np.random.choice(n, p = GAMMA[i])
+		Delta[i,j] += 1	
+	else:
+		for i in range(n):
+			J = np.random.choice(n, p = GAMMA[i], size = m_updates_per)
+			Delta[i,J] += 1	
 	return(Delta)
 
 def deterministic_update(GAMMA, m_updates):
 	n = GAMMA.shape[0]
-	Delta = GAMMA * m_updates
+	Delta = GAMMA * m_updates / n
 	return(Delta)
 
 
