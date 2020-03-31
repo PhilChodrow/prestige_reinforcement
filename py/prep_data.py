@@ -48,23 +48,27 @@ def df_to_matrix_sequence(df):
 
 	T_ = np.zeros((t_max - t_min+1, n, n))
 	for i in df.index:
-		T_[df.t[i] - t_min, df.endorsed[i], df.endorser[i]] += df.k[i] 
+		T_[df.t[i] - t_min, df.endorser[i], df.endorsed[i]] += df.k[i] 
 	T = np.cumsum(T_, axis = 0) 
 	
 	return(T)   
 
-def initial_condition(T, timesteps, t_start):
+def initial_condition(T, timesteps, t_start = 0, t_end = None):
 	
-	A0 = T[t_start,:,:]
+	if not t_end:
+		t_end = T.shape[0]
+
+
+	A0 = T[t_start:t_end,:,:].sum(axis = 0)
 	A0 = A0 / A0.sum() # normalized
 
 	# mean hiring per year after t_start: 
-	v = T[t_start:,:,:].sum(axis = (1,2))
+	v = T[t_start:t_end,:,:].sum(axis = (1,2))
 	A0 = A0*((v[-1] - v[0]) / len(v))   
 
 	n_obs = T[-1].sum() - T[t_start].sum()
 
-	return(T[t_start:,:,:], timesteps[t_start:], A0, n_obs)
+	return(T[t_start:t_end,:,:], timesteps[t_start:t_end], A0, n_obs)
 
 # -------------------------
 # MATH PHD 
