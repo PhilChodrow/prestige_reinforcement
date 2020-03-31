@@ -5,7 +5,7 @@ from scipy.optimize import minimize
 from numdifftools import Hessian
 import warnings
 
-class learner:
+class model:
 	'''
 	an object-oriented approach to inference
 	'''
@@ -48,17 +48,23 @@ class learner:
 		A = T.copy()
 		PHI = np.zeros((self.k_features, n, n))
 
+		
+		self.GAMMA = np.zeros((n_rounds, n, n))
+		self.A = np.zeros((n_rounds, n, n))
+		self.S = np.zeros((n_rounds, n))
+
 		for t in range(1, n_rounds+1):	
 
 			T[t] = T[t-1]
 
 			# compute scores
 			s = self.score(A[t-1])
+			self.S[t-1] = s
 
 			# compute features
 			for k in range(self.k_features):
 				PHI[k] = self.phi[k](s)
-			
+
 			# compute rate matrix from scores
 			p = np.tensordot(beta, PHI, axes = (0,0))
 			GAMMA = np.exp(p)
@@ -68,8 +74,11 @@ class learner:
 			Delta = update(GAMMA, **update_kwargs)
 
 			T[t] += Delta
-			A[t] += lam*A[t-1] + (1-lam)*Delta	
-
+			A[t] += lam*A[t-1] + (1-lam)*Delta
+			
+			self.GAMMA[t-1] = GAMMA
+			self.A[t-1] = A[t-1]
+			
 		return(T)
 
 
@@ -225,7 +234,15 @@ class learner:
 		x = np.concatenate((np.array([lam]), beta))	
 		return Hessian(f)(x)	
 
+	def get_rates(self):
+		return self.GAMMA
+	
+	def get_scores(self):
+		return self.S
 
+	def get_states(self):
+		return self.A
+	
 	def likelihood_surface(self, LAM, BETA):
 		'''
 		only implemented for a surface over lambda and a single parameter vector, will error in higher-dimensional models
