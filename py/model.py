@@ -2,12 +2,13 @@ import numpy as np
 from scipy.optimize import minimize
 from numdifftools import Hessian
 import warnings
-
+from numba import jit
 
 # --------
 # update steps 
 # --------
 
+# @jit(nopython=True)
 def stochastic_update(GAMMA, m_updates_per = 1, m_updates = None):
 	n = GAMMA.shape[0]
 	Delta = np.zeros_like(GAMMA) # initialize
@@ -22,6 +23,7 @@ def stochastic_update(GAMMA, m_updates_per = 1, m_updates = None):
 			Delta[i,J] += 1	
 	return(Delta)
 
+@jit(nopython=True)
 def deterministic_update(GAMMA, m_updates):
 	n = GAMMA.shape[0]
 	Delta = GAMMA * m_updates / n
@@ -47,10 +49,12 @@ class model:
 	# DATA --> FEATURES
 	# -------------------------------------------------------------------------
 
+	
 	def set_features(self, feature_list):
 		
 		self.phi = feature_list
 		self.k_features = len(self.phi)
+
 
 	def set_score(self, score_function):
 		'''
@@ -61,6 +65,8 @@ class model:
 	# -------------------------------------------------------------------------
 	# SIMULATION
 	# -------------------------------------------------------------------------	
+	
+	
 	def simulate(self, beta, lam, A0, n_rounds = 1, update = stochastic_update, align = True, **update_kwargs):
 
 		# setup
@@ -112,9 +118,11 @@ class model:
 	# INFERENCE: FEATURES + PARAMS --> RATES
 	# -------------------------------------------------------------------------
 
+	@jit(nopython=True)
 	def compute_state_matrix(self, lam):
 		self.A = estimation.state_matrix(self.T, lam = lam, A0 = self.A0)
 
+	@jit(nopython=True)
 	def compute_score(self):
 		'''
 		should compute a list of score vectors, one in each timestep
