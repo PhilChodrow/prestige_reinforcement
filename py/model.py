@@ -1,10 +1,31 @@
 import numpy as np
-from py import estimation
-from py import simulation
-from py import features
 from scipy.optimize import minimize
 from numdifftools import Hessian
 import warnings
+
+
+# --------
+# update steps 
+# --------
+
+def stochastic_update(GAMMA, m_updates_per = 1, m_updates = None):
+	n = GAMMA.shape[0]
+	Delta = np.zeros_like(GAMMA) # initialize
+
+	if m_updates is not None:
+		i = np.random.randint(n)
+		j = np.random.choice(n, p = GAMMA[i])
+		Delta[i,j] += 1	
+	else:
+		for i in range(n):
+			J = np.random.choice(n, p = GAMMA[i], size = m_updates_per)
+			Delta[i,J] += 1	
+	return(Delta)
+
+def deterministic_update(GAMMA, m_updates):
+	n = GAMMA.shape[0]
+	Delta = GAMMA * m_updates / n
+	return(Delta)
 
 class model:
 	'''
@@ -40,7 +61,7 @@ class model:
 	# -------------------------------------------------------------------------
 	# SIMULATION
 	# -------------------------------------------------------------------------	
-	def simulate(self, beta, lam, A0, n_rounds = 1, update = simulation.stochastic_update, align = True, **update_kwargs):
+	def simulate(self, beta, lam, A0, n_rounds = 1, update = stochastic_update, align = True, **update_kwargs):
 
 		# setup
 		n = A0.shape[0]
@@ -269,38 +290,4 @@ class model:
 				M[i,j] = self.ll(np.array([beta]))
 		
 		return(M)
-
-# --------
-# update steps 
-# --------
-
-def stochastic_update(GAMMA, m_updates_per = 1, m_updates = None):
-	n = GAMMA.shape[0]
-	Delta = np.zeros_like(GAMMA) # initialize
-
-	if m_updates is not None:
-		i = np.random.randint(n)
-		j = np.random.choice(n, p = GAMMA[i])
-		Delta[i,j] += 1	
-	else:
-		for i in range(n):
-			J = np.random.choice(n, p = GAMMA[i], size = m_updates_per)
-			Delta[i,J] += 1	
-	return(Delta)
-
-def deterministic_update(GAMMA, m_updates):
-	n = GAMMA.shape[0]
-	Delta = GAMMA * m_updates / n
-	return(Delta)
-
-
-
-
-
-
-
-
-
-
-
 
