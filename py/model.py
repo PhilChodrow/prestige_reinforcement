@@ -3,6 +3,8 @@ from scipy.optimize import minimize
 from numdifftools import Hessian
 import warnings
 from numba import jit
+from py import estimation
+
 
 # --------
 # update steps 
@@ -118,19 +120,25 @@ class model:
 	# INFERENCE: FEATURES + PARAMS --> RATES
 	# -------------------------------------------------------------------------
 
-	@jit(nopython=True)
+	
 	def compute_state_matrix(self, lam):
 		self.A = estimation.state_matrix(self.T, lam = lam, A0 = self.A0)
 
-	@jit(nopython=True)
-	def compute_score(self):
+	
+	def compute_score(self, align = True):
 		'''
 		should compute a list of score vectors, one in each timestep
 		'''
 		S = np.zeros((self.n_rounds, self.n))
 		
 		for t in range(self.n_rounds):
-			S[t] = self.score(self.A[t])
+			s = self.score(self.A[t])
+			if align:
+				if t > 0:
+					s_ = S[t-1]
+					if np.dot(s, s_) < 0:
+						s = -s
+			S[t] = s
 
 		self.S = S
 
@@ -184,7 +192,7 @@ class model:
 			)
 		return(res)
 
-	def ML(self, lam0 = .5, alpha0 = 10**(-4), delta = 10**(-4), tol = 10**(-3), step_cap = 0.2, print_updates = False, **kwargs):
+	def ML(self, lam0 = .5, alpha0 = 10**(-4), delta = 10**(-4), tol = 10**(-3), step_cap = 0.2, print_updates = False, align = True, **kwargs):
 		'''
 		**kwargs are passed to the optimization over lambda. 
 		It's not necessary to control the optimization over the params 
@@ -195,7 +203,7 @@ class model:
 		def obj(lam):
 
 			self.compute_state_matrix(lam)
-			self.compute_score()
+			self.compute_score(align)
 			self.compute_features()
 
 			res = self.ML_pars(b0 = self.b0)	

@@ -86,7 +86,7 @@ def read_math_phd(path):
 	
 	df.endorsed -= 1
 	df.endorser -= 1
-    
+	
 	with open(path + 'school_names.txt') as f:
 		labels = f.read().splitlines()
 		for i in range(len(labels)):
@@ -133,6 +133,14 @@ def prep_newcomb_frat(path, rank_threshold = 1):
 				ignore_index = True)
 
 	T = df_to_matrix_sequence(df)
+	
+	diff = (T[10] - T[9] + T[8] - T[7])/2
+
+	for i in range(9,T.shape[0]):
+		T[i] +=  diff
+
+	for j in range(T.shape[0]):
+		np.fill_diagonal(T[j], 0)
 
 	timesteps = np.arange((tau.max() + 1))
 
