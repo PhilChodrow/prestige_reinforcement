@@ -77,7 +77,7 @@ def RW_score(A, p = .75, alpha = 0):
     D_losses = np.diag(losses.sum(axis = 1))
     M = p*(wins - D_losses) + (1-p)*(losses - D_wins) + alpha*np.eye(A.shape[0])
     eigs = np.linalg.eig(M)
-    which_eig = np.argmin(np.abs(np.linalg.eig(M)[0]))
+    which_eig = np.argmin(np.abs(eigs[0]))
     val = eigs[0][which_eig]
     v = eigs[1][:,which_eig]
     v = np.abs(v)
