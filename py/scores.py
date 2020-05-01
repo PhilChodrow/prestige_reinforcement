@@ -6,17 +6,11 @@ from SpringRank import SpringRank
 SpringRank_score = SpringRank
 
 @jit(nopython=True)
-def homebrew_SpringRank_score(A, alpha = 10**(-8), bias = None):
+def homebrew_SpringRank_score(A, alpha = 10**(-8)):
     Di = np.diag(A.sum(axis = 0))
     Do = np.diag(A.sum(axis = 1))
-    
-    if bias is not None:
-#         bias = bias / bias.sum() * A.shape[0]
-        regularizer = alpha * np.diag(bias)
-    else:
-        regularizer = alpha * np.eye(A.shape[0])
-    
-    L = Di + Do - A - A.T + alpha*regularizer
+        
+    L = Di + Do - A - A.T + alpha*np.eye(A.shape[0])
     return(np.linalg.inv(L).dot(Do - Di).dot(np.ones(A.shape[0])))
 
 @jit(nopython=True)
