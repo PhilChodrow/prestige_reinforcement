@@ -7,3 +7,7 @@ py/.ipynb_checkpoints
 hessian.ipynb
 fig
 *.DS_Store
+*.tplx
+py/__pycache__
+py/.ipynb_checkpoints
+

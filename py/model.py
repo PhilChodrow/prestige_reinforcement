@@ -3,7 +3,6 @@ from scipy.optimize import minimize
 from numdifftools import Hessian
 import warnings
 from numba import jit
-from py import estimation
 
 
 # --------
@@ -12,6 +11,9 @@ from py import estimation
 
 # @jit(nopython=True)
 def stochastic_update(GAMMA, m_updates_per = 1, m_updates = None):
+	'''
+	compute a stochastic update from a rate matrix GAMMA, with specified number of updates (samples from the rows of GAMMA). By default, performs a total of n updates, one for each agent. To specify a number of updates, set m_updates. 
+	'''
 	n = GAMMA.shape[0]
 	Delta = np.zeros_like(GAMMA) # initialize
 
@@ -27,13 +29,40 @@ def stochastic_update(GAMMA, m_updates_per = 1, m_updates = None):
 
 @jit(nopython=True)
 def deterministic_update(GAMMA, m_updates):
+	'''
+	compute a *deterministic* update from the rate matrix GAMMA. the deterministic update consists in adding GAMMA itself to the current state, normalized by m_updates/n. 
+	'''
 	n = GAMMA.shape[0]
 	Delta = GAMMA * m_updates / n
 	return(Delta)
 
+
+def state_matrix(T, lam, A0 = None):
+	'''
+	compute the state matrix for a sequence of updates T using specified memory parameter lam and initial condition A0. 
+	'''
+    n_rounds = T.shape[0]
+    DT = np.diff(T, axis = 0)
+    A = np.zeros_like(T).astype(float)
+    if A0 is None:
+        A[0] = T[0]
+    else:
+        A[0] = A0
+    for j in range(1,n_rounds):
+        A[j] = lam*A[j-1]+(1-lam)*DT[j-1]
+    return(A)
+
 class model:
 	'''
-	an object-oriented approach to inference
+	This class implements an object-oriented approach to simulation and inference. 
+	
+	The set_data() method is used to provide an initial state matrix A0 and sequence of updates T. The ML() method is then used to perform maximum likelihood inference for the memory and bias parameters. 
+
+	Alternatively, one can simulate from the model by not setting data, and then using the simulate() method with specified parameters. 
+
+	In both cases, it is necessary to set a score function (set_score()) and one or more feature maps (set_features()).
+
+
 	'''
 
 	def __init__(self, T = None, A0 = None):
@@ -53,14 +82,16 @@ class model:
 
 	
 	def set_features(self, feature_list):
-		
+		'''
+		Each element of feature_list is a function whose argument is a vector of length n and whose return value is an nxn matrix. 
+		'''
 		self.phi = feature_list
 		self.k_features = len(self.phi)
 
 
 	def set_score(self, score_function):
 		'''
-		score_function is assumed to return a vector for each matrix
+		The score function has a single argument, an nxn matrix, and returns a vector of length n. 
 		'''
 		self.score = score_function
 		
@@ -70,7 +101,16 @@ class model:
 	
 	
 	def simulate(self, beta, lam, A0, n_rounds = 1, update = stochastic_update, align = True, **update_kwargs):
-
+		'''
+		Simulate from the model. 
+		beta: a 1d np.array() of bias parameters, of the same length as the feature_list argument in self.set_features(). 
+		lam: the memory parameter lambda 
+		A0: 2d np.array(), the initial state matrix
+		n_rounds: number of rounds over which to to perform simulation
+		update: update method, one of either stochastic_update or deterministic_update
+		align: if True, will attempt to align score vectors. Used when the sign of the score vector is not meaningful; e.g. in the case of the Fiedler vector score. 
+		update_kwargs: additional argumentas passed to the function specified in update. 
+		'''
 		# setup
 		n = A0.shape[0]
 		T = np.zeros((n_rounds+1, n, n)) 
@@ -122,7 +162,7 @@ class model:
 
 	
 	def compute_state_matrix(self, lam):
-		self.A = estimation.state_matrix(self.T, lam = lam, A0 = self.A0)
+		self.A = state_matrix(self.T, lam = lam, A0 = self.A0)
 
 	
 	def compute_score(self, align = True):
@@ -170,7 +210,6 @@ class model:
 
 		features is a hyperarray with axes time x n_features x i x j
 		beta is a vector. 
-
 		'''
 		
 		warnings.filterwarnings("ignore", category=RuntimeWarning)
@@ -264,7 +303,9 @@ class model:
 			}) 	
 
 	def estimate_hessian(self, lam, beta):
-
+		'''
+		Estimate the Hessian matrix of the log-likelihood at the maximum likelihood parameter value. Used for estimating error bars on the returned parameters. 
+		'''
 		def f(par_vec):
 
 			self.compute_state_matrix(par_vec[0])
@@ -277,17 +318,27 @@ class model:
 		return Hessian(f)(x)	
 
 	def get_rates(self):
+		'''
+		Return the sequence of rate matrices resulting from either simulation or inference. 
+		'''
 		return self.GAMMA
 	
 	def get_scores(self):
+		'''
+		Return the sequence of scores resulting from either simulation or inference. 
+		'''
 		return self.S
 
 	def get_states(self):
+		'''
+		Return the sequence of state matrices resulting from either simulation or inference. 
+		'''
 		return self.A
 	
 	def likelihood_surface(self, LAM, BETA):
 		'''
-		only implemented for a surface over lambda and a single parameter vector, will error in higher-dimensional models
+		Compute the two-dimensional likelihood surface over the memory parameter lambda a single bias parameter beta. 
+		Will error if the model has more than one bias parameter. 
 		'''
 		
 		lam_grid = len(LAM)

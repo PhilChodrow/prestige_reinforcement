@@ -7,10 +7,10 @@ import numpy as np
 # -------------------------
 
 def make_throughput_path():
-
-	# create a throughput folder in which 
-	# to hold the data if needed. 
-
+	'''
+	create a throughput folder in which to hold the data if needed. 
+	'''
+	
 	throughput_path = 'throughput'
 	Path(throughput_path).mkdir(exist_ok = True)
 
@@ -40,6 +40,9 @@ def top_n_filter(df, labels = None, top_n = None, col = 'endorsed'):
 	return(df, label_lookup)
 
 def df_to_matrix_sequence(df): 
+	'''
+	Convert a data frame of endorsement events into a sequence of matrices. 
+	'''
 
 	n = max(df.endorser.max()+1, df.endorsed.max()+1)
 
@@ -54,7 +57,9 @@ def df_to_matrix_sequence(df):
 	return(T)   
 
 def initial_condition(T, timesteps, t_start = 0, t_end = None):
-	
+	'''
+	Construct a simple initial condition from a sequence by averaging the timesteps between t_start and t_end, and then remove them from the data. 
+	'''
 	if not t_end:
 		t_end = T.shape[0]
 
