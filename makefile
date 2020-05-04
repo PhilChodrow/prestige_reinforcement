@@ -1,19 +1,22 @@
-.PHONY: clean, all
+.PHONY: clean, all, FIG_PATHS
 
-FIGS: fig/dynamics_examples.png
-# , fig/bifurcations.png
+FIG_PATHS = fig/dynamics_examples.png
+SIM_PATHS = throughput/Eigenvector_birfurcation.txt, throughput/Root_Degree_bifurcation.txt, SpringRank_bifurcation.txt	
 
-SIMULATIONS: throughput/Eigenvector_birfurcation.txt, throughput/Root_Degree_bifurcation.txt, SpringRank_bifurcation.txt	
+figs: $(FIG_PATHS)
+sims: $(SIM_PATHS)
 
-all: fig/dynamics_examples.png
+all: figs
 
-fig/dynamics_examples.png: 
+clean:
+	rm -f $(FIGS)
+
+$(FIG_PATHS): 
 	python3 scripts/make_dynamics_fig.py
 
-# fig/bifurcations.png: 
-
-
-$(SIMULATIONS):
+$(SIM_PATHS):
 	python3 scripts/simulate_bifurcations.py
+
+
 
 
