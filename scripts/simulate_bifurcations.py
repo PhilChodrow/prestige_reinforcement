@@ -61,5 +61,7 @@ if __name__ == '__main__':
             GAMMA = np.sort(GAMMA, axis = 2)
             V[j] = GAMMA[(-5000):(-1)].mean(axis = (0,1))
 
+        V = np.concatenate((BETAS[:,np.newaxis], V), axis = 1)
+
         save_path = 'throughput/' + labels[i] + '_bifurcation.txt'
         np.savetxt(save_path, V)
