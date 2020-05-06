@@ -20,7 +20,6 @@ cset = ['#4477AA', '#EE6677', '#228833', '#CCBB44', '#66CCEE', '#AA3377']
 cset_muted = ['#CC6677', '#332288', '#DDCC77', '#117733', '#88CCEE', '#882255', '#44AA99', '#999933', '#AA4499', '#DDDDDD','#000000']
 
 # read and clean dfs containing the curves
-
 def read_SpringRank_curves():
     df_SR = pd.read_csv('numerics/data_n_10.csv') # springRank
     df_SR['s_1'] = df_SR.s1
@@ -66,16 +65,16 @@ def read_EV_curves():
 
 # computation functions
 
-def compute_gamma(row): 
+def compute_gamma(row, feature = lambda x: x): 
     beta = row.beta
     s_1 = row.s_1
     s_2 = row.s_2
     n_1 = row.n_1
     n_2 = n - n_1
     
-    v_1 = np.exp(beta*s_1)
-    v_2 = np.exp(beta*s_2)
-    
+    v_1 = np.exp(beta*feature(s_1))
+    v_2 = np.exp(beta*feature(s_2))
+
     gamma_1 = np.array(v_1/(n_1*v_1 + n_2*v_2))
     gamma_2 = np.array(v_2/(n_1*v_1 + n_2*v_2))
     
@@ -89,7 +88,7 @@ if __name__ == '__main__':
     df_EV = read_EV_curves()
 
     df_SR = pd.concat((df_SR, df_SR.apply(compute_gamma, result_type = 'expand', axis = 1)), axis = 1)
-    df_deg = pd.concat((df_deg, df_deg.apply(compute_gamma, result_type = 'expand', axis = 1)), axis = 1)
+    df_deg = pd.concat((df_deg, df_deg.apply(compute_gamma, result_type = 'expand', axis = 1, feature = lambda x: np.sqrt(x))), axis = 1)
     df_EV = pd.concat((df_EV, df_EV.apply(compute_gamma, result_type = 'expand', axis = 1)), axis = 1)
 
     ix = df_deg.gamma_1 > .9
@@ -124,22 +123,42 @@ if __name__ == '__main__':
             p = df_sub.groupby(['n_1','group', 'stable']).apply(
                 lambda g: ax.plot(g.beta, 
                                   g[gamma], 
-                                  zorder = 1,
+                                  zorder = 3,
                                   color = 'black', 
                                   linewidth = 1)
                 )
         
-        for k in range(V.shape[1]):
-            
-            p = ax.scatter(BETAS, V[:,k], alpha = 1, s=20, zorder = 2, facecolors='none', edgecolors = cset[0])
+        # fix for numerical issues in root-degree
+        # stability calc isn't QUITE stable up to required threshold due to linear algebra numerical issues
+
+        p = ax.plot([0, instabilities[i]],[1/n,1/n], color = 'black', linewidth = 1, zorder = 3)
 
         
+        for k in range(V.shape[1]):
+            
+            p = ax.scatter(BETAS, V[:,k], alpha = 1, s=20, zorder = 4, facecolors='none', edgecolors = cset[0])
+
+        ax.vlines(x = instabilities[i], 
+                  ymin = 0,
+                  ymax = 1,
+                  linewidth=1, 
+                  linestyle='dashed',
+                  zorder = 2)
+    
+        ax.vlines(x = emergence[i], 
+                  ymin = 0,
+                  ymax = 1,
+                  linewidth=1, 
+                  linestyle='dashed',
+                  zorder = 2)
+
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
 
-        ax.set(xlabel = r'$\beta$')
-        ax.set(ylabel = r'$\gamma$')
-
+        ax.set(xlabel = r'$\beta$',
+               ylabel = r'$\gamma$',
+               title = labels[i])
+        
     plt.savefig('fig/bifurcations.png', dpi = 300, bbox_inches = 'tight')
 
 
