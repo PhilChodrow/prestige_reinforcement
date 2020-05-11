@@ -41,16 +41,16 @@ def state_matrix(T, lam, A0 = None):
 	'''
 	compute the state matrix for a sequence of updates T using specified memory parameter lam and initial condition A0. 
 	'''
-    n_rounds = T.shape[0]
-    DT = np.diff(T, axis = 0)
-    A = np.zeros_like(T).astype(float)
-    if A0 is None:
-        A[0] = T[0]
-    else:
-        A[0] = A0
-    for j in range(1,n_rounds):
-        A[j] = lam*A[j-1]+(1-lam)*DT[j-1]
-    return(A)
+	n_rounds = T.shape[0]
+	DT = np.diff(T, axis = 0)
+	A = np.zeros_like(T).astype(float)
+	if A0 is None:
+	    A[0] = T[0]
+	else:
+	    A[0] = A0
+	for j in range(1,n_rounds):
+	    A[j] = lam*A[j-1]+(1-lam)*DT[j-1]
+	return(A)
 
 class model:
 	'''
