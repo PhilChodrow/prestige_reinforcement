@@ -101,9 +101,9 @@ if __name__ == '__main__':
     dfs = [df_SR, df_deg, df_EV]
     sims = [sim_SR, sim_deg, sim_EV]
 
-    fig, axarr = plt.subplots(1,3, figsize = (15, 3.5))
+    fig, axarr = plt.subplots(1,2, figsize = (10, 3.5))
 
-    for i in range(3):
+    for i in range(2):
         ax = axarr[i]
         df = dfs[i]
         V = sims[i]

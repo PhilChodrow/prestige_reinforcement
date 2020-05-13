@@ -56,17 +56,18 @@ def katz_score(A, alpha = .001):
     return(np.linalg.inv(I - alpha*A).dot(e))
 
 @jit(nopython=True)
-def PageRank_score(A, n_iter = 30, alpha = 0.15):
+def PageRank_score(A, n_iter = 30, alpha = 0.85):
     '''
     Approximate the PageRank score of A with specified teleportation parameter alpha via the power method with specified number of iterations. 
     '''
     n = A.shape[0]
     e = np.ones(n)
     d = A.sum(axis = 1)
-    norm = np.outer(e, d)
-    A_ = A/norm
+    D_inv = np.diag(1/d)
+    # norm = np.outer(e, d)
+    P = np.dot(A.T, D_inv)
     
-    M = (1-alpha)*A_ + alpha/n
+    M = (alpha)*P + (1-alpha)/n
     
     v = np.random.rand(n)
     for i in range(n_iter):
