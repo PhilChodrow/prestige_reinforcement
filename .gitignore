@@ -12,4 +12,5 @@ py/__pycache__
 py/.ipynb_checkpoints
 throughput/*.txt
 throughput/*.csv
+data/*
 
