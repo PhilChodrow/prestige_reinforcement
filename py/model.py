@@ -6,23 +6,28 @@ from numba import jit
 from scipy.special import gammaln
 
 
-# --------
-# update steps 
-# --------
+################################################################################
+# UPDATE FUNCTIONS
+################################################################################
 
 # @jit(nopython=True)
 def stochastic_update(GAMMA, m_updates_per = 1, m_updates = None):
 	'''
 	compute a stochastic update from a rate matrix GAMMA, with specified number of updates (samples from the rows of GAMMA). By default, performs a total of n updates, one for each agent. To specify a number of updates, set m_updates. 
+	GAMMA: np.array(), a square matrix whose ijth entry gives the probability that agent i endorses agent j, conditional on agent i being selected to make an endorsement. 
+	m_updates_per: int, the number of endorsements per agent. If m_updates per is set and m_updates is not, then each agent will make m_updates_per endorsements per timestep. 
+	m_updates: int, the number of total endorsements. If m_updates is not None, then an agent will be selected uniformly at random and will make an endorsement, with this process being repeated m_updates times. 
 	'''
 	n = GAMMA.shape[0]
 	Delta = np.zeros_like(GAMMA) # initialize
 
-	if m_updates is not None:
+	# if m_updates is set, randomly select agents to make endorsements a total of m_updates times.
+	if m_updates is not None: 
 		i = np.random.randint(n)
 		j = np.random.choice(n, p = GAMMA[i])
 		Delta[i,j] += 1	
-	else:
+	# otherwise, each agent makes m_updates_per endorsements. 
+	else: 
 		for i in range(n):
 			J = np.random.choice(n, p = GAMMA[i], size = m_updates_per)
 			Delta[i,J] += 1	
@@ -31,25 +36,41 @@ def stochastic_update(GAMMA, m_updates_per = 1, m_updates = None):
 @jit(nopython=True)
 def deterministic_update(GAMMA, m_updates):
 	'''
-	compute a *deterministic* update from the rate matrix GAMMA. the deterministic update consists in adding GAMMA itself to the current state, normalized by m_updates/n. 
+	compute a *deterministic* update from the rate matrix GAMMA. the deterministic update consists in adding GAMMA itself to the current state, normalized by m_updates/n. 	
+	Multiply m_updates by n to obtain a deterministic analog of m_updates_per. 
+	GAMMA: np.array(), a square matrix whose ijth entry gives the probability that agent i endorses agent j, conditional on agent i being selected to make an endorsement. 
+	m_updates: int, the number of total updates to make. 
 	'''
 	n = GAMMA.shape[0]
 	Delta = GAMMA * m_updates / n
 	return(Delta)
 
+################################################################################
+# STATE MATRIX FROM DATA
+################################################################################
 
 def state_matrix(T, lam, A0 = None):
 	'''
-	compute the state matrix for a sequence of updates T using specified memory parameter lam and initial condition A0. 
+	compute the state matrix for a sequence of cumulative data T using specified memory parameter lam and initial condition A0. 
+	T: np.array(), a 3-dimensional array in which the first axis indexes time. T[t] is an n x n matrix in which the ijth entry gives the number of endorsements of j by i by timestep t.  
+	lam: float, a memory parameter between zero and one. 
+	A0: np.array(), a 2-dimensional array specifying the state matrix at system initialization. 
 	'''
 	n_rounds = T.shape[0]
+	
+	# extract the incremental updates associated with T
 	DT = np.diff(T, axis = 0)
-	A = np.zeros_like(T).astype(float)
-	if A0 is None:
 
+	# pre-allocate the state matrix
+	A = np.zeros_like(T).astype(float)
+	
+	# if initial state is not specified, then just use first layer of T[0]
+	if A0 is None:
 		A[0] = T[0]
 	else:
 		A[0] = A0
+	
+	# construct state matrix according to update equation
 	for j in range(1,n_rounds):
 		A[j] = lam*A[j-1]+(1-lam)*DT[j-1]
 
@@ -64,8 +85,6 @@ class model:
 	Alternatively, one can simulate from the model by not setting data, and then using the simulate() method with specified parameters. 
 
 	In both cases, it is necessary to set a score function (set_score()) and one or more feature maps (set_features()).
-
-
 	'''
 
 	def __init__(self, T = None, A0 = None):
@@ -79,14 +98,14 @@ class model:
 			self.n_rounds = T.shape[0]
 			self.n = T.shape[1]
 
-	# -------------------------------------------------------------------------
-	# DATA --> FEATURES
-	# -------------------------------------------------------------------------
+################################################################################
+# SET MODEL ATTRIBUTES
+################################################################################
 
-	
 	def set_features(self, feature_list):
 		'''
-		Each element of feature_list is a function whose argument is a vector of length n and whose return value is an nxn matrix. 
+		Set the feature maps associated with the model. 
+		feature_list: a list() of functions from n-vectors to n x n matrices. 
 		'''
 		self.phi = feature_list
 		self.k_features = len(self.phi)
@@ -94,14 +113,14 @@ class model:
 
 	def set_score(self, score_function):
 		'''
-		The score function has a single argument, an nxn matrix, and returns a vector of length n. 
+		Set the score function of the model. 
+		The score function take a single argument, an n x n matrix, and returns a vector of length n. 
 		'''
 		self.score = score_function
 		
-	# -------------------------------------------------------------------------
-	# SIMULATION
-	# -------------------------------------------------------------------------	
-	
+################################################################################
+# SIMULATION
+################################################################################
 	
 	def simulate(self, beta, lam, A0, n_rounds = 1, update = stochastic_update, align = True, **update_kwargs):
 		'''
@@ -112,7 +131,7 @@ class model:
 		n_rounds: number of rounds over which to to perform simulation
 		update: update method, one of either stochastic_update or deterministic_update
 		align: if True, will attempt to align score vectors. Used when the sign of the score vector is not meaningful; e.g. in the case of the Fiedler vector score. 
-		update_kwargs: additional argumentas passed to the function specified in update. 
+		update_kwargs: additional arguments passed to the function specified in update. 
 		'''
 		# setup
 		n = A0.shape[0]
@@ -158,19 +177,20 @@ class model:
 			
 		return(T)
 
+################################################################################
+# INFERENCE HELPERS
+################################################################################
 
-	# -------------------------------------------------------------------------
-	# INFERENCE: FEATURES + PARAMS --> RATES
-	# -------------------------------------------------------------------------
-
-	
 	def compute_state_matrix(self, lam):
+		"""
+		Compute the sequence of state matrices for specified memory parameter lam. 
+		"""
 		self.A = state_matrix(self.T, lam = lam, A0 = self.A0)
 
 	
-	def compute_score(self, align = True):
+	def compute_score(self):
 		'''
-		should compute a list of score vectors, one in each timestep
+		Compute the sequence of score vectors (one in each timestep), using self.score(). Requires that self.compute_state_matrix() has already been called. 
 		'''
 		S = np.zeros((self.n_rounds, self.n))
 		
@@ -182,11 +202,12 @@ class model:
 					if np.dot(s, s_) < 0:
 						s = -s
 			S[t] = s
-
 		self.S = S
 
 	def compute_features(self):
-
+		"""
+		Compute the array of feature matrices PHI. Requires that self.compute_score() has already been called. 
+		"""
 		PHI = np.zeros((self.n_rounds, self.k_features, self.n, self.n))
 		for t in range(self.n_rounds):
 			for k in range(self.k_features):
@@ -195,7 +216,11 @@ class model:
 		self.PHI = PHI
 
 	def compute_rate_matrix(self, beta):
-
+		"""
+		Compute the rate matrix GAMMA for specified preference parameters beta. 
+		Requires that self.compute_scores() and self.compute_features() have already been called. 
+		beta: np.array(), the preference parameter
+		"""
 		assert len(beta) == self.k_features
 
 		# GAMMA = np.zeros((self.n_rounds, self.n, self.n))
@@ -206,13 +231,14 @@ class model:
 
 		self.GAMMA = GAMMA
 
+################################################################################
+# INFERENCE: OBJECTIVES AND ALGORITHMS
+################################################################################
 
 	def ll(self, beta):
 		'''
-		so what we'd like to do here is separate graph computations from parameter optimization in a principled way. The point is that, having computed the features, the optimization over beta is convex and hopefully fast. 
-
-		features is a hyperarray with axes time x n_features x i x j
-		beta is a vector. 
+		Objective function for likelihood maximization as a function of beta, with lambda implicitly fixed. Requires that self.compute_score() and self.compute_features() have already been run. 	
+		beta: np.array(), the preference parameter. 
 		'''
 		
 		warnings.filterwarnings("ignore", category=RuntimeWarning)
@@ -221,30 +247,46 @@ class model:
 		DT = np.diff(self.T, axis = 0)
 		C = gammaln(DT.sum(axis = 1)+1).sum() - gammaln(DT+1).sum()
 		ll = (DT*np.log(self.GAMMA[:-1])).sum() + C
+
 		return(ll)
 
-	def ML_pars(self, b0 = None, bounds = None):
+	def ML_pars(self, b0 = None):
+		"""
+		Estimate the preference parameter from data using scipy.minimize(). 
+		This optimization is convex and requires no control parameters. 
+		b0: np.array(), the initial guess for the preference parameter. Generally unnecessary to set in practical settings. 
+		"""
 		
 		if b0 is None:
 			b0 = np.zeros(self.k_features)
 
 		res = minimize(
 			fun = lambda b: -self.ll(b),
-			x0 = b0,
-			bounds = bounds
+			x0 = b0
 			)
 		return(res)
 
-	def ML(self, lam0 = .5, alpha0 = 10**(-4), delta = 10**(-4), tol = 10**(-3), step_cap = 0.2, print_updates = False, align = True, **kwargs):
+	def ML(self, lam0 = .5, alpha0 = 10**(-4), delta = 10**(-4), tol = 10**(-3), step_cap = 0.2, print_updates = False, align = True):
 		'''
-		**kwargs are passed to the optimization over lambda. 
-		It's not necessary to control the optimization over the params 
-		because the objective is convex. 
+		Estimate the parameters lambda and beta from empirical data. 
+		Requires that self.set_data() has already been called. 
+		Because the problem is convex in beta, we use ML_pars (which in turn calls scipy.minimize()) to evaluate the objective as a function of lambda. 
+		We then optimize this objective via hill-climbing. 
+		lam0: float, the initial guess for lambda
+		alpha0: float, the initial step size allowed when performing hill-climbing over lambda
+		delta: float, the increment used to estimate the derivative of the likelihood with respect to lambda using forward differences. 
+		tol: float. If the objective changes by less than tol in an interation, the algorithm is considered to have converged. 
+		step_cap: float, the largest step size allowable when performing hill-climbing over lambda. 
+		print_updates: bool, if true, prints updates after each outer iteration. 
+		align: passed to self.compute_score()
 		'''
+
+		# initial guess for beta
 		self.b0 = np.zeros(self.k_features)
 		
-		def obj(lam):
+		# objective function in lambda, obtained by optimizing over beta using self.ML_pars(). Each call sets self.b0 to the obtained value of beta to encourage faster convergence. 
 
+		def obj(lam):
 			self.compute_state_matrix(lam)
 			self.compute_score(align)
 			self.compute_features()
@@ -254,31 +296,32 @@ class model:
 			self.b0 = res['x']
 			return(out)
 
-		# bespoke numerical gradient descent with adaptive 
-		# learning rate
+		# bespoke numerical gradient ascent with adaptive 
+		# learning rate for learning lambda
 		print('computing memory hyperparameter lambda')
 
+		# initialize
 		lam = lam0
 		obj_old = np.inf
 		obj_current = obj(lam0)
-		# obj_best = np.inf
-
 		alpha = alpha0
 
 		while (obj_old - obj_current > tol):
 			
 			obj_old = obj_current
-			
 			alpha = alpha0
 			
+			# estimate the derivative of the objective via forward differences, thresholding against the control parameters. Computed only once per outer iteration; controls the initial step. 
+
 			deriv = (obj(lam + delta) - obj_current)/delta
 			deriv = np.sign(deriv)*np.min((np.abs(deriv), step_cap/alpha))
 			
 			obj_proposal = np.inf
 			proposal = lam - alpha*deriv
 			
+			# keep trying progressively smaller steps in the indicated direction until one of them improves the objective
 			while obj_proposal > obj_current:
-				
+			
 				proposal = lam - alpha*deriv
 				obj_proposal = obj(proposal)
 				alpha = alpha/2
@@ -289,7 +332,7 @@ class model:
 			if print_updates:
 				print('Lambda = ' + str(lam) + ', LL = ' + str(obj_current))
 		
-
+		# after the optimal lambda has been identified, perform one last optimization over beta to obtain the estimated preference parameter. 
 		print('computing parameter vector beta')
 		self.compute_state_matrix(lam)
 		self.compute_score()
@@ -301,7 +344,6 @@ class model:
 		
 		return({
 			'lam' : lam,
-			# 'lam_stderr' : lam_stderr,
 			'beta' : beta,
 			'LL' : - res['fun']
 			}) 	
@@ -309,6 +351,8 @@ class model:
 	def estimate_hessian(self, lam, beta):
 		'''
 		Estimate the Hessian matrix of the log-likelihood at the maximum likelihood parameter value. Used for estimating error bars on the returned parameters. 
+		lam: float, the estimated value of lambda
+		beta: np.array(), the estimated value of the preference parameter vector beta. 
 		'''
 		def f(par_vec):
 
@@ -320,6 +364,10 @@ class model:
 		
 		x = np.concatenate((np.array([lam]), beta))	
 		return Hessian(f)(x)	
+
+################################################################################
+# GETTERS FOR INSPECTION + VISUALIZATION
+################################################################################
 
 	def get_rates(self):
 		'''
@@ -338,11 +386,17 @@ class model:
 		Return the sequence of state matrices resulting from either simulation or inference. 
 		'''
 		return self.A
-	
+
+################################################################################
+# LIKELIHOOD SURFACE FOR VISUALIZATION
+################################################################################
+
 	def likelihood_surface(self, LAM, BETA):
 		'''
-		Compute the two-dimensional likelihood surface over the memory parameter lambda a single bias parameter beta. 
+		Compute the two-dimensional likelihood surface over the memory parameter lambda and a single bias parameter beta. 
 		Will error if the model has more than one bias parameter. 
+		LAM: 1-d np.array(), the set of values of lambda over which to compute the likelihood
+		BETA: 1-d np.array(), the set of values of beta over which to compute the likelihood
 		'''
 		
 		lam_grid = len(LAM)
