@@ -13,4 +13,4 @@ py/.ipynb_checkpoints
 throughput/*.txt
 throughput/*.csv
 data/*
-mk_misc
+mk_misc/*
