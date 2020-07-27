@@ -11,6 +11,5 @@ fig
 py/__pycache__
 py/.ipynb_checkpoints
 throughput/*.txt
-throughput/*.csv
 data/*
 mk_misc/*
