@@ -23,9 +23,10 @@ def stochastic_update(GAMMA, m_updates_per = 1, m_updates = None):
 
 	# if m_updates is set, randomly select agents to make endorsements a total of m_updates times.
 	if m_updates is not None: 
-		i = np.random.randint(n)
-		j = np.random.choice(n, p = GAMMA[i])
-		Delta[i,j] += 1	
+		for u in range(m_updates):
+			i = np.random.randint(n)
+			j = np.random.choice(n, p = GAMMA[i])
+			Delta[i,j] += 1	
 	# otherwise, each agent makes m_updates_per endorsements. 
 	else: 
 		for i in range(n):
@@ -151,10 +152,9 @@ class model:
 
 			# compute scores
 			s = self.score(A[t-1])
-			if align:
-				s_ = self.S[t-2]
-				if np.dot(s, s_) < 0:
-					s = -s
+			s_ = self.S[t-2]
+			if np.dot(s, s_) < 0:
+				s = -s
 			self.S[t-1] = s
 
 			# compute features
@@ -196,11 +196,10 @@ class model:
 		
 		for t in range(self.n_rounds):
 			s = self.score(self.A[t])
-			if align:
-				if t > 0:
-					s_ = S[t-1]
-					if np.dot(s, s_) < 0:
-						s = -s
+			if t > 0:
+				s_ = S[t-1]
+				if np.dot(s, s_) < 0:
+					s = -s
 			S[t] = s
 		self.S = S
 
@@ -288,7 +287,7 @@ class model:
 
 		def obj(lam):
 			self.compute_state_matrix(lam)
-			self.compute_score(align)
+			self.compute_score()
 			self.compute_features()
 
 			res = self.ML_pars(b0 = self.b0)	
