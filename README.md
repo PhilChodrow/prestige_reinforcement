@@ -1,4 +1,4 @@
-# Emergence of Hierarchy in Networked Endorsement Dynamics
+# Code for _Emergence of Hierarchy in Networked Endorsement Dynamics_
 
 
 <img align="right" width="300" height="200" src="img/fig_1.png">
